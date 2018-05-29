@@ -1,7 +1,7 @@
 ---
 title: "106-2 大數據分析方法 作業二"
 output: github_document
-author: Yi-Ju Tseng
+author: WU YI JIE
 ---
 
 作業完整說明[連結](https://docs.google.com/document/d/1aLGSsGXhgOVgwzSg9JdaNz2qGPQJSoupDAQownkGf_I/edit?usp=sharing)
@@ -13,77 +13,251 @@ author: Yi-Ju Tseng
 ## 來台境外生分析
 ### 資料匯入與處理
 ```{r dataloadToTWN}
-#這是R Code Chunk
-```
-
-### 哪些國家來台灣唸書的學生最多呢？ 
-```{r ToTWNCountry}
-#這是R Code Chunk
-head(iris)
-knitr::kable(head(iris))
+library(readr)
+library(dplyr)
 library(knitr)
-kable(head(iris))
+library(ggplot2)
+library(choroplethr)
+library(choroplethrMaps)
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(RColorBrewer)
+`103_ab103_C` <- read.csv("C:/Users/yijie/Downloads/103_ab103_C.csv")
+`103_ab103_S` <- read.csv("C:/Users/yijie/Downloads/103_ab103_S.csv")
+`104_ab104_C` <- read.csv("C:/Users/yijie/Downloads/104_ab104_C.csv")
+`104_ab104_S` <- read.csv("C:/Users/yijie/Downloads/104_ab104_S.csv")
+`105_ab105_C` <- read.csv("C:/Users/yijie/Downloads/105_ab105_C.csv")
+`105_ab105_S` <- read.csv("C:/Users/yijie/Downloads/105_ab105_S.csv")
+`106_ab105_C` <- read.csv("C:/Users/yijie/Downloads/106_ab105_C.csv")
+`106_ab105_S` <- read.csv("C:/Users/yijie/Downloads/106_ab105_S.csv")
+CountriesComparisionTable <- read_csv("C:/Users/yijie/Downloads/CountriesComparisionTable.csv")
+
 ```
 
-### 哪間大學的境外生最多呢？
+### 請問哪些國家來台灣唸書的學生最多呢？取出前十名的國家與總人數，由大到小排序，加總103年以後的資料。 
+```{r ToTWNCountry}
+`103_ab103_C`$t103<-rowSums(`103_ab103_C`[,3:11])#新增欄位填入人數總和，總和是3到11 col的sum
+`104_ab104_C`$t104<-rowSums(`104_ab104_C`[,3:11])
+`105_ab105_C`$t105<-rowSums(`105_ab105_C`[,3:11])
+`106_ab105_C`$t106<-rowSums(`106_ab105_C`[,3:11])
+
+X103<-`103_ab103_C`[order(`103_ab103_C`$t103,decreasing = T),][1:11,c(2,12)]#依人數總和由大到小排序11名
+X104<-`104_ab104_C`[order(`104_ab104_C`$t104,decreasing = T),][1:11,c(2,12)]#，只取2跟12col
+X105<-`105_ab105_C`[order(`105_ab105_C`$t105,decreasing = T),][1:11,c(2,12)]
+X106<-`106_ab105_C`[order(`106_ab105_C`$t106,decreasing = T),][1:11,c(2,12)]
+
+X103456<-inner_join(X103,inner_join(X104,inner_join(X105,X106)))#將四個資料表合併
+X103456$t<-rowSums(X103456[,2:5])#新增總和欄位，填入2到5col的sum
+kable(X103456[order(X103456$t,decreasing = T),][1:10,c(1,6)])#依人數總和由大到小排序10名，只取1跟6 col
+```
+
+### 哪間大學的境外生最多呢？取出前十名的大學與總人數，由大到小排序，加總103年以後的資料。
 ```{r ToTWNUniversity}
-#這是R Code Chunk
+`103_ab103_S`$t103<-rowSums(`103_ab103_S`[,4:12])#新增欄位填入人數總和，總和是4到12 col的sum
+`104_ab104_S`$t104<-rowSums(`104_ab104_S`[,4:12])
+`105_ab105_S`$t105<-rowSums(`105_ab105_S`[,4:12])
+`106_ab105_S`$t106<-rowSums(`106_ab105_S`[,4:12])
+
+ab103<-`103_ab103_S`[order(`103_ab103_S`$t103,decreasing = T),][1:20,c(3,13)]#依人數總和由大到小排序20名
+ab104<-`104_ab104_S`[order(`104_ab104_S`$t104,decreasing = T),][1:20,c(3,13)]#，只取2跟12col
+ab105<-`105_ab105_S`[order(`105_ab105_S`$t105,decreasing = T),][1:20,c(3,13)]
+ab106<-`106_ab105_S`[order(`106_ab105_S`$t106,decreasing = T),][1:20,c(3,13)]
+
+ab103456<-inner_join(ab103,inner_join(ab104,inner_join(ab105,ab106)))#將四個資料表合併
+ab103456$t<-rowSums(ab103456[,2:5])#新增總和欄位，填入2到5col的sum
+kable(ab103456[order(ab103456$t,decreasing = T),][1:10,c(1,6)])#依人數總和由大到小排序10名，只取1跟6 col
 ```
 
-### 各個國家來台灣唸書的學生人數條狀圖
+### 用bar chart呈現各個國家(全部)來台灣唸書的學生人數
 ```{r ToTWNCountryBar}
-#這是R Code Chunk
+XX103<-`103_ab103_C`[,c(2,12)]#資料只取2跟12 col
+XX104<-`104_ab104_C`[,c(2,12)]
+XX105<-`105_ab105_C`[,c(2,12)]
+XX106<-`106_ab105_C`[,c(2,12)]
+
+XX103456<-full_join(XX103,full_join(XX104,full_join(XX105,XX106)))#將四個資料表合併
+XX103456[is.na(XX103456)]<-0#將NA設為0，方便計算
+XX103456$t<-rowSums(XX103456[,2:5])#新增總和欄位，填入2到5col的sum
+colnames(XX103456)[1]<-"country"#為避免錯誤所以將colname改成英文
+
+ggplot()+geom_bar(data=XX103456,aes(x=country,y=t),stat = "identity")#畫圖
 ```
 
-### 各個國家來台灣唸書的學生人數面量圖
+### 用面量圖呈現各個國家來台灣唸書的學生人數，人數越多顏色越深
 ```{r ToTWNCountryMap}
-#這是R Code Chunk
+`103_ab103_C` <- read.csv("C:/Users/yijie/Downloads/103_ab103_C.csv")
+`104_ab104_C` <- read.csv("C:/Users/yijie/Downloads/104_ab104_C.csv")
+`105_ab105_C` <- read.csv("C:/Users/yijie/Downloads/105_ab105_C.csv")
+`106_ab105_C` <- read.csv("C:/Users/yijie/Downloads/106_ab105_C.csv")
+CountriesComparisionTable <- read_csv("C:/Users/yijie/Downloads/CountriesComparisionTable.csv")
+
+`103_ab103_C`$t103<-rowSums(`103_ab103_C`[,3:11])#新增欄位填入人數總和，總和是3到11 col的sum
+`104_ab104_C`$t104<-rowSums(`104_ab104_C`[,3:11])
+`105_ab105_C`$t105<-rowSums(`105_ab105_C`[,3:11])
+`106_ab105_C`$t106<-rowSums(`106_ab105_C`[,3:11])
+
+XXX103<-`103_ab103_C`[,c(2,12)]#資料只取2跟12 col
+XXX104<-`104_ab104_C`[,c(2,12)]
+XXX105<-`105_ab105_C`[,c(2,12)]
+XXX106<-`106_ab105_C`[,c(2,12)]
+
+XXX103456<-full_join(XXX103,full_join(XXX104,full_join(XXX105,XXX106)))#將四個資料表合併
+XXX103456$t<-rowSums(XXX103456[,2:5])#新增總和欄位，填入2到5col的sum
+XXX103456<-XXX103456[,c(1,6)]#資料只取1跟6 col
+
+colnames(CountriesComparisionTable)[3]<-"國別"#為方便join所以改colname
+country.name<-right_join(CountriesComparisionTable,XXX103456,by="國別")#以國別為key合併兩張資料表
+country.name<-country.name[complete.cases(country.name),]#留下非空值的資料
+
+
+world <- readShapeSpatial("C:/Users/yijie/Downloads/TM_WORLD_BORDERS-0.3/TM_WORLD_BORDERS-0.3.shp")#匯入世界地圖
+world.df <-fortify(world, region = "ISO3")
+
+colnames(world.df)[6]<-"ISO3"#為方便join所以改colname
+final.plot<-merge(world.df,country.name,by="ISO3",all.x=T)#以ISO3為key合併兩張資料表
+final.plot<-final.plot[order(final.plot$order),]#以資料裡的order排序資料
+
+twcmap<-ggplot() +       #畫面量圖
+  geom_polygon(data = final.plot, 
+               aes(x =long, y =lat,
+                   group=group,
+                   fill = t), 
+               color = "gray", 
+               size = 0.1) + 
+  coord_map()+
+  scale_fill_gradientn(
+    colours = brewer.pal(5,"Reds"))+
+  theme_void()
+twcmap
 ```
 
 ## 台灣學生國際交流分析
 
 ### 資料匯入與處理
 ```{r dataloadFromTWN}
-#這是R Code Chunk
+Student_RPT_07 <- read.csv("C:/Users/yijie/Downloads/Student_RPT_07.csv")
 ```
 
-### 台灣大專院校的學生最喜歡去哪些國家進修交流呢？
+### 台灣大專院校的學生最喜歡去哪些國家進修交流呢？請取出前十名的國家與總人數，由大到小排序
 ```{r FromTWNCountry}
-#這是R Code Chunk
+Student_RPT_07 <- read.csv("C:/Users/yijie/Downloads/Student_RPT_07.csv", stringsAsFactors=FALSE)
+colnames(Student_RPT_07)[4]<-"Taiwan"#為方便join所以改colname
+colnames(Student_RPT_07)[7]<-"total"#為避免錯誤所以將colname改成英文
+
+Student<-group_by(Student_RPT_07,Taiwan)%>%#以Taiwan分組
+  summarise(schoolsum=sum(total))#加總人數
+orderstudent<-head(order(Student$schoolsum,decreasing = T),10)#以人數由大排到小取前十
+kable(Student[orderstudent,])
+
 ```
 
-### 哪間大學的出國交流學生數最多呢？
+### 加總103年以後的資料，哪間大學的出國交流學生數最多呢？取出前十名的大學與總人數，由大到小排序
 ```{r FromTWNUniversity}
-#這是R Code Chunk
+Student_RPT_07 <- read.csv("C:/Users/yijie/Downloads/Student_RPT_07.csv", stringsAsFactors=FALSE)
+colnames(Student_RPT_07)[3]<-"sname"#為避免錯誤所以將colname改成英文
+colnames(Student_RPT_07)[7]<-"total"#為避免錯誤所以將colname改成英文
+Student_RPT<-group_by(Student_RPT_07,sname)%>%#以sname分組
+  summarise(schoolsum=sum(total))#加總人數
+orderschool<-head(order(Student_RPT$schoolsum,decreasing = T),10)#以人數由大排到小取前十
+kable(Student_RPT[orderschool,])
 ```
 
-### 台灣大專院校的學生最喜歡去哪些國家進修交流條狀圖
+### 用bar chart呈現台灣大專院校(全部)的學生去各國家進修交流人數
 ```{r FromTWNCountryBar}
-#這是R Code Chunk
+ggplot()+geom_bar(data=Student_RPT,aes(x=sname,y=schoolsum),stat = "identity")#畫bar圖
 ```
 
-### 台灣大專院校的學生最喜歡去哪些國家進修交流面量圖
+### 用面量圖呈現台灣大專院校的學生去各國家進修交流人數，人數越多顏色越深
 ```{r FromTWNCountryMap}
-#這是R Code Chunk
+CountriesComparisionTable <- read_csv("C:/Users/yijie/Downloads/CountriesComparisionTable.csv")
+colnames(Student_RPT_07)[4]<-"Taiwan"#為方便join所以改colname
+CountriesComparisionTable[48,3]<-"中國大陸"#為方便join所以把原本的中國;大陸改為中國大陸
+
+schoolcountry.name<-right_join(CountriesComparisionTable,Student_RPT_07,by="Taiwan")#併兩張資料表
+schoolcountry.name<-schoolcountry.name[complete.cases(schoolcountry.name),]#保留非空值
+
+world <- readShapeSpatial("C:/Users/yijie/Downloads/TM_WORLD_BORDERS-0.3/TM_WORLD_BORDERS-0.3.shp")#匯入世界地圖
+world.df <-fortify(world, region = "ISO3")
+
+Student<-group_by(schoolcountry.name,ISO3)%>%#以ISO3分組
+  summarise(schoolsum=sum(total))#加總人數
+
+colnames(world.df)[6]<-"ISO3"#為方便join所以改colname
+final<-merge(world.df,Student,by="ISO3",all.x=T)#以ISO3為key合併
+final<-final[order(final$order),]#以資料裡的order排序資料
+
+sixmap<-ggplot() +#畫世界面量圖
+  geom_polygon(data = final, 
+               aes(x =long, y =lat,
+                   group=group,
+                   fill =schoolsum), 
+               color = "gray", 
+               size = 0.1) + 
+  coord_map()+
+  scale_fill_gradientn(
+    colours = brewer.pal(5,"Reds"))+
+  theme_void()
+sixmap
 ```
 
 ## 台灣學生出國留學分析
 
 ### 資料匯入與處理
 ```{r dataloadFromTWNAb}
-#這是R Code Chunk
+`105c.`<- read.csv("C:/Users/yijie/Downloads/105c .csv")
 ```
 
-### 台灣學生最喜歡去哪些國家留學呢？
+### 台灣學生最喜歡去哪些國家留學呢？取出前十名的國家與總人數，由大到小排序
 ```{r FromTWNAb}
-#這是R Code Chunk
+`105c.`<- read.csv("C:/Users/yijie/Downloads/105c .csv",stringsAsFactor=F)
+colnames(`105c.`)[3]<-"tot"#為避免錯誤所以將colname改成英文
+seven<-head(`105c.`<-`105c.`[order(`105c.`$tot,decreasing = T),],10)#以人數由大排到小取前十
+kable(seven[,2:3])
 ```
 
-### 台灣學生最喜歡去哪些國家留學面量圖
+### 用面量圖呈現台灣學生去各國家留學人數，人數越多顏色越深
 ```{r FromTWNAbMap}
-#這是R Code Chunk
+CountriesComparisionTable <- read_csv("C:/Users/yijie/Downloads/CountriesComparisionTable.csv")
+`105c.`<- read.csv("C:/Users/yijie/Downloads/105c .csv",stringsAsFactor=F)
+colnames(`105c.`)[2]<-"Taiwan"#為方便join所以改colname
+
+stucountry.name<-right_join(CountriesComparisionTable,`105c.`,by="Taiwan")#以Taiwan為key合併
+stucountry.name<-stucountry.name[complete.cases(stucountry.name),]#保留非空值
+
+world <- readShapeSpatial("C:/Users/yijie/Downloads/TM_WORLD_BORDERS-0.3/TM_WORLD_BORDERS-0.3.shp")#匯入世界地圖
+world.df <-fortify(world, region = "ISO3")
+
+colnames(world.df)[6]<-"ISO3"#為方便join所以改colname
+final<-merge(world.df,stucountry.name,by="ISO3",all.x=T)#以ISO3為key合併
+final<-final[order(final$order),]#以資料裡的order排序資料
+colnames(final)[11]<-"totalpo"#為避免錯誤所以將colname改成英文
+
+
+sevenmap<-ggplot() +#畫世界面量圖
+  geom_polygon(data = final, 
+               aes(x =long, y =lat,
+                   group=group,
+                   fill =totalpo), 
+               color = "gray", 
+               size = 0.1) + 
+  coord_map()+
+  scale_fill_gradientn(
+    colours = brewer.pal(5,"Reds"))+
+  theme_void()
+sevenmap
 ```
 
 ## 綜合分析
 
-請問來台讀書與離台讀書的來源國與留學國趨勢是否相同(5分)？想來台灣唸書的境外生，他們的母國也有很多台籍生嗎？請圖文並茂說明你的觀察(10分)。
+來台讀書與離台讀書的來源國與留學國趨勢是否相同？想來台灣唸書的境外生，他們的母國也有很多台籍生嗎？圖文並茂說明我的觀察。
+
+趨勢相同，他們的母國也有很多台籍生，由下面兩張面量圖可知
+
+###第一張面量圖呈現各個國家來台灣唸書的學生人數，人數越多顏色越深
+
+###第二張面量圖呈現台灣大專院校的學生去各國家進修交流人數，人數越多顏色越深
+```{r}
+twcmap
+sixmap
+```
